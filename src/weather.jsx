@@ -13,7 +13,7 @@ function Weather() {
                 <p className="font-light">City Name</p>
                 <p className="text-lg font-medium tracking-widest">Tokyo</p>
               </div>
-              <div>画像</div>
+              <div>画像1</div>
             </div>
             <div className="pt-2 text-left">
               <p className="font-light">Weather Condition</p>
@@ -28,7 +28,7 @@ function Weather() {
                   </p>
                 </div>
                 <div>
-                  <p className="font-light text-xs">Temprature</p>
+                  <p className="font-light text-xs">Temperature</p>
                   <p className="font-bold tracking-more-wider text-sm">20°C</p>
                 </div>
                 <div>
