@@ -1,12 +1,18 @@
-name: Deploy to Vercel
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
       - main
+  pull_request:
   workflow_dispatch:
+
 jobs:
-  build:
+  # ===============================
+  # Job 1: Build & Deploy to Vercel
+  # ===============================
+  deploy-vercel:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
@@ -14,12 +20,12 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3  # Node.jsの実行環境をセットアップ
+        uses: actions/setup-node@v3
         with:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install  # 依存パッケージをインストール
+        run: npm install
 
       - name: Build and Deploy to Vercel
         uses: amondnet/vercel-action@v25
@@ -28,3 +34,42 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod'
+
+
+  # ===============================
+  # Job 2: Wiz CLI Image Scan (PR only)
+  # ===============================
+  wiz-cli-image-scan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    env:
+      SCAN_PATH: "."
+      TAG: "docker-tag"
+      POLICY: "Default vulnerabilities policy"
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Build the Docker image
+        run: cd $SCAN_PATH && docker build . --tag $TAG
+
+      - name: Download Wiz CLI
+        run: curl -o wizcli https://downloads.wiz.io/wizcli/latest/wizcli-linux-amd64 && chmod +x wizcli
+
+      - name: Authenticate to Wiz
+        run: ./wizcli auth --id "$WIZ_CLIENT_ID" --secret "$WIZ_CLIENT_SECRET"
+        env:
+          WIZ_CLIENT_ID: ${{ secrets.WIZ_CLIENT_ID }}
+          WIZ_CLIENT_SECRET: ${{ secrets.WIZ_CLIENT_SECRET }}
+
+      - name: Run wiz-cli docker image scan
+        run: ./wizcli docker scan --image $TAG --policy "$POLICY"
+
+      - name: Fetch digest of Docker image for Graph enrichment
+        run: ./wizcli docker tag --image $TAG
